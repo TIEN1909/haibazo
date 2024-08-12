@@ -100,7 +100,7 @@ export default function Home() {
 
   const getTitleText = () => {
     if (success) return <p className="text-green-700">ALL CLEARED</p>;
-    if (gameOver) return <p className="text-red-700">ALL CLEARED</p>;
+    if (gameOver) return <p className="text-red-700">GAME OVER</p>;
     return "LET'S PLAY";
   };
 
