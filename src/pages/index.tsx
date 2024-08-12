@@ -54,7 +54,7 @@ export default function Home() {
   };
 
   const handlePlayClick = () => {
-    if (inputValue === 0) return; // Không làm gì nếu inputValue bằng 0
+    if (inputValue === 0) return;
 
     setTime(0); // Reset the timer
     setClickedCount(0);
