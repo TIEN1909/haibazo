@@ -1,117 +1,158 @@
-import Image from "next/image";
+import { useState, useEffect, useRef } from "react";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
 
+interface Element {
+  id: number;
+  x: number;
+  y: number;
+  isClicked: boolean;
+}
+
 export default function Home() {
+  const [time, setTime] = useState<number>(0); // State to track the elapsed time
+  const [isPlaying, setIsPlaying] = useState<boolean>(false); // State to track if the game is playing
+  const [inputValue, setInputValue] = useState<number>(0); // State to track input value
+  const [elements, setElements] = useState<Element[]>([]); // State to store elements
+  const [clickedCount, setClickedCount] = useState<number>(0); // State to track number of clicked elements
+  const [gameOver, setGameOver] = useState<boolean>(false); // State to track if the game is over
+  const [success, setSuccess] = useState<boolean>(false); // State to track if the game is won
+  const containerRef = useRef<HTMLDivElement>(null); // Reference to the container
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isPlaying) {
+      timer = setInterval(() => {
+        setTime((prevTime) => prevTime + 0.1);
+      }, 100);
+    } else if (timer) {
+      clearInterval(timer);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isPlaying]);
+
+  const generateElements = () => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const containerHeight = containerRef.current.offsetHeight;
+
+      const newElements: Element[] = Array.from({ length: inputValue }, (_, index) => {
+        const size = 40; // Size of the element
+        const x = Math.random() * (containerWidth - size);
+        const y = Math.random() * (containerHeight - size);
+        return { id: index + 1, x, y, isClicked: false };
+      });
+
+      // Sort elements by id in ascending order (smaller id on top)
+      newElements.sort((a, b) => a.id - b.id);
+
+      setElements(newElements);
+    }
+  };
+
+  const handlePlayClick = () => {
+    if (inputValue === 0) return; // Không làm gì nếu inputValue bằng 0
+
+    setTime(0); // Reset the timer
+    setClickedCount(0);
+    setGameOver(false);
+    setSuccess(false); // Reset success state
+    setIsPlaying(true); // Start the timer
+    generateElements(); // Generate the elements
+  };
+
+  const handleElementClick = (id: number) => {
+    if (gameOver || success) return;
+
+    if (id === clickedCount + 1) {
+      // Correct order
+      const updatedElements = [...elements];
+      const elementIndex = updatedElements.findIndex((element) => element.id === id);
+      updatedElements[elementIndex].isClicked = true;
+      setElements(updatedElements);
+      setClickedCount(clickedCount + 1);
+
+      setTimeout(() => {
+        // Remove the clicked element after 0.2 seconds
+        setElements((prevElements) =>
+          prevElements.filter((element) => element.id !== id)
+        );
+      }, 200);
+
+      if (clickedCount + 1 === inputValue) {
+        setIsPlaying(false);
+        setSuccess(true);
+      }
+    } else {
+      // Incorrect order
+      setGameOver(true);
+      setIsPlaying(false);
+    }
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(event.target.value, 10) || 0;
+    setInputValue(value);
+  };
+
+  const getTitleText = () => {
+    if (success) return <p className="text-green-700">ALL CLEARED</p>;
+    if (gameOver) return <p className="text-red-700">ALL CLEARED</p>;
+    return "LET'S PLAY";
+  };
+
   return (
     <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
+      className={`flex min-h-screen flex-col items-center py-2 px-24 ${inter.className}`}
     >
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+      <div className="">
+        <h1 className="text-2xl font-bold mb-4 mt-5">{getTitleText()}</h1>
+        <div className="flex items-center mt-2">
+          <p>Points:</p>
+          <input
+            type="text"
+            className="bg-transparent border border-gray-400 pl-1 rounded ml-28 focus:outline-blue-500"
+            value={inputValue}
+            onChange={handleInputChange}
+          />
         </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
+        <div className="flex items-center gap-4 mt-4">
+          <p>Time:</p>
+          <p className="ml-[105px]">{time.toFixed(1)}s</p> {/* Display the time */}
+        </div>
+        <button
+          onClick={handlePlayClick}
+          className="bg-gray-200 w-28 border border-gray-400 rounded font-medium mt-2"
         >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
+          {isPlaying ? "Restart" : "Play"}
+        </button>
+        <div
+          ref={containerRef}
+          className="relative w-[700px] h-[600px] border-2 border-black mt-4 overflow-hidden "
         >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+          {elements.map((element) => (
+            <div
+              key={element.id}
+              className={`absolute rounded-full text-black flex items-center justify-center cursor-pointer ${
+                element.isClicked ? "bg-red-500" : "bg-white border-black"
+              }`}
+              style={{
+                width: "40px",
+                height: "40px",
+                top: `${element.y}px`,
+                left: `${element.x}px`,
+                zIndex: 100 - element.id, // Ensure smaller IDs are on top (larger zIndex)
+                border: "2px solid black" // Black border
+              }}
+              onClick={() => handleElementClick(element.id)}
+            >
+              {element.id}
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
